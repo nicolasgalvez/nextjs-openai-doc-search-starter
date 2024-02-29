@@ -43,22 +43,27 @@ export default async function handler(req: NextRequest) {
       throw new UserError('Missing request data')
     }
 
-    const { prompt: query } = requestData
+    const { prompt: query, voice: voice } = requestData
 
     if (!query) {
       throw new UserError('Missing query in request data')
     }
+    if (voice) {
+      console.log('voice ' + voice)
+    }
+    console.log('starting')
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
-
+    console.log('supabase client created')
     // Moderate the content to comply with OpenAI T&C
     const sanitizedQuery = query.trim()
     const moderationResponse: CreateModerationResponse = await openai
       .createModeration({ input: sanitizedQuery })
       .then((res) => res.json())
+      console.log('moderation response')
 
     const [results] = moderationResponse.results
-
+    console.log('moderation results')
     if (results.flagged) {
       throw new UserError('Flagged content', {
         flagged: true,
@@ -84,7 +89,7 @@ export default async function handler(req: NextRequest) {
       'match_page_sections',
       {
         embedding,
-        match_threshold: 0.78,
+        match_threshold: 0.48,
         match_count: 10,
         min_content_length: 50,
       }
@@ -113,22 +118,20 @@ export default async function handler(req: NextRequest) {
 
     const prompt = codeBlock`
       ${oneLine`
-        You are a very enthusiastic Supabase representative who loves
-        to help people! Given the following sections from the Supabase
+        Answer in the requested voice. Given the following sections from the
         documentation, answer the question using only that information,
         outputted in markdown format. If you are unsure and the answer
-        is not explicitly written in the documentation, say
-        "Sorry, I don't know how to help with that."
+        is not explicitly written in the documentation, apologize.
       `}
 
       Context sections:
       ${contextText}
 
-      Question: """
+      Question: "
       ${sanitizedQuery}
-      """
+      "
 
-      Answer as markdown (including related code snippets if available):
+      Answer as markdown (including related code snippets if available) and summarize in the voice requested:
     `
 
     const chatMessage: ChatCompletionRequestMessage = {
@@ -140,7 +143,7 @@ export default async function handler(req: NextRequest) {
       model: 'gpt-3.5-turbo',
       messages: [chatMessage],
       max_tokens: 512,
-      temperature: 0,
+      temperature: 1.2,
       stream: true,
     })
 
@@ -151,7 +154,6 @@ export default async function handler(req: NextRequest) {
 
     // Transform the response into a readable stream
     const stream = OpenAIStream(response)
-
     // Return a StreamingTextResponse, which can be consumed by the client
     return new StreamingTextResponse(stream)
   } catch (err: unknown) {

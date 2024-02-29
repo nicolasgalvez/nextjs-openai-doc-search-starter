@@ -13,10 +13,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { useCompletion } from 'ai/react'
 import { X, Loader, User, Frown, CornerDownLeft, Search, Wand } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 
 export function SearchDialog() {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState<string>('')
+  const [voice, setVoice] = React.useState<string>('80s Valley Girl')
 
   const { complete, completion, isLoading, error } = useCompletion({
     api: '/api/vector-search',
@@ -121,8 +123,9 @@ export function SearchDialog() {
                     <Wand width={18} className="text-white" />
                   </span>
                   <h3 className="font-semibold">Answer:</h3>
-                  {completion}
+                  <ReactMarkdown className="answer-md">{completion}</ReactMarkdown>
                 </div>
+
               ) : null}
 
               <div className="relative">
@@ -132,6 +135,11 @@ export function SearchDialog() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className="col-span-3"
+                />
+                <Input
+                  type="hidden"
+                  name="voice"
+                  value={voice}
                 />
                 <CornerDownLeft
                   className={`absolute top-3 right-5 h-4 w-4 text-gray-300 transition-opacity ${
@@ -158,6 +166,18 @@ export function SearchDialog() {
               <Button type="submit" className="bg-red-500">
                 Ask
               </Button>
+              <button
+                  type="button"
+                  className="px-1.5 py-0.5
+                  bg-slate-50 dark:bg-gray-500
+                  hover:bg-slate-100 dark:hover:bg-gray-600
+                  rounded border border-slate-200 dark:border-slate-600
+                  transition-colors"
+                  onClick={(_) => setVoice('A tired Newscaster')}
+                >
+                  Switch Voice
+                </button>
+                <p>voice: {voice}</p>
             </DialogFooter>
           </form>
         </DialogContent>
